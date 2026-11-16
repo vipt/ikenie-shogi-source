@@ -1,19 +1,19 @@
-# v1.2.27 に対応するソースとAndroidビルド
+# v1.2.28 に対応するソースとAndroidビルド
 
-対象は生贄将棋 v1.2.27、Android applicationId `net.vipt.ikenie_shogi`、versionCode `30` です。
+対象は生贄将棋 v1.2.28、Android applicationId `net.vipt.ikenie_shogi`、versionCode `31` です。
 アプリ本体はGPL v3以降で配布し、GPLの条件に従って複製・改変・再配布できます。無保証です。
 GPL本文は [`COPYING`](../COPYING)、変更内容・日付は [`CHANGELOG.md`](../CHANGELOG.md) にあります。
 
 ## 入手先と内容
 
-[GitHub Release v1.2.27](https://github.com/vipt/ikenie-shogi-source/releases/tag/v1.2.27) から
-`ikenie-shogi-1.2.27-source.zip` をダウンロードしてください。アカウントや追加料金は不要です。
-このZIPにはタグ `v1.2.27` のソースと、公開AABに使用した生成済みの `android/` が含まれます。
+[GitHub Release v1.2.28](https://github.com/vipt/ikenie-shogi-source/releases/tag/v1.2.28) から
+`ikenie-shogi-1.2.28-source.zip` をダウンロードしてください。アカウントや追加料金は不要です。
+このZIPにはタグ `v1.2.28` のソースと、公開AABに使用した生成済みの `android/` が含まれます。
 `SOURCE-MANIFEST.json` にコミット、バージョン、各ファイルのSHA-256を記録します。
 リリース添付の `SHA256SUMS.txt` でAABとソースZIPのハッシュを確認できます。
 
 この公開専用リポジトリには配布版のスナップショットの履歴を収録し、非公開の開発履歴は含みません。以前の配布版はそれぞれのタグから取得できます。
-タグ `v1.2.27` を `git clone` した場合も、生成済み `android/` が含まれます。
+タグ `v1.2.28` を `git clone` した場合も、生成済み `android/` が含まれます。
 Androidプロジェクトを再生成する場合は、依存関係をインストール後、`npx expo prebuild --platform android --no-install` を実行します。
 公開版と同じ生成済み設定を使う場合は、同梱の `android/` を利用してください。
 

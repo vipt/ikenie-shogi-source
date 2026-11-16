@@ -10,11 +10,12 @@ import {ArchiveReplay} from './ArchiveReplay';
 import {RecordImport} from './RecordImport';
 import {formatSharedRecord,type ImportedRecord} from '../game/shared-record';
 import {colors} from './theme';
+import {handicapLabel} from '../game/handicap';
 const reasons={mate:'詰み','no-moves':'指せる手なし',repetition:'千日手','perpetual-check':'連続王手',resign:'投了','move-limit':'手数上限'};
 export const archiveResult=(r:Result|null)=>r?(r.winner?SIDE_LABEL[r.winner]+'の勝ち':'引き分け')+' · '+reasons[r.reason]:'途中終了';
 const dateLabel=(s:ArchiveSummary)=>s.session.startedAt?new Date(s.session.startedAt).toLocaleString('ja-JP'):'日時不明';
 const players=(s:Settings)=>(['sente','gote'] as const).map(side=>{const p=playerFor(s,side);return SIDE_LABEL[side]+' '+(p.kind==='cpu'?'CPU Lv.'+p.level:'人間');}).join(' ／ ');
-const rules=(s:Settings)=>({both:'両者回収可',sente:'先手だけ回収可',gote:'後手だけ回収可',none:'回収なし'})[s.rules.selfCapture??'both']+' · 玉：'+({all:'味方も取れる',enemy:'相手のみ',none:'取れない'})[s.rules.kingCapture];
+const rules=(s:Settings)=>handicapLabel(s.rules)+' · '+({both:'両者回収可',sente:'先手だけ回収可',gote:'後手だけ回収可',none:'回収なし'})[s.rules.selfCapture??'both']+' · 玉：'+({all:'味方も取れる',enemy:'相手のみ',none:'取れない'})[s.rules.kingCapture];
 function Action({id,label,disabled,onPress}:{id:string;label:string;disabled?:boolean;onPress:()=>void}){return <Pressable testID={id} accessibilityRole="button" disabled={disabled} onPress={onPress} style={[styles.button,disabled&&{opacity:.3}]}><Text style={styles.buttonText}>{label}</Text></Pressable>;}
 export function ArchiveBrowser({onClose,snapshot}:{onClose:()=>void;snapshot:{game:Game;settings:Settings;session:GameSession}}){
  const [keys,setKeys]=useState<string[]>([]),[rows,setRows]=useState<ArchiveSummary[]>([]),[loaded,setLoaded]=useState(0),[loading,setLoading]=useState(true),[error,setError]=useState('');

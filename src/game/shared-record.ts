@@ -3,6 +3,7 @@ import {createGame, legalMoves, moveLabel, opposite, play, resign, withMoveLimit
 import {DEFAULT_SETTINGS, type Settings} from './persistence';
 import {playerFor, withPlayers, type Players, type PlayerSettings} from './match-settings';
 import {DEFAULT_CPU_LEVEL, validCpuLevel} from './cpu-levels';
+import {HANDICAPS, HANDICAP_KINDS, type Handicap} from './handicap';
 
 export const MAX_SHARED_RECORD_LENGTH = 200_000;
 const MAX_PLIES = 5000;
@@ -17,7 +18,8 @@ const playerName = (player: PlayerSettings) => player.kind === 'human' ? '人間
 export function formatSharedRecord(game: Game, settings: Settings, startedAt: string|null = null): string {
   const rules = game.position.rules;
   return [
-    '生贄将棋', '棋譜形式:1', `対局日時:${startedAt ?? '不明'}`,
+    '生贄将棋', `棋譜形式:${rules.handicap?2:1}`, `対局日時:${startedAt ?? '不明'}`,
+    ...(rules.handicap?[`手合割:${HANDICAPS[rules.handicap.kind].label} · 上手:${SIDE_LABEL[rules.handicap.side]}`]:[]),
     `先手 ${playerName(playerFor(settings,'sente'))} ／ 後手 ${playerName(playerFor(settings,'gote'))}`,
     `${recoveryNames[rules.selfCapture ?? 'both']} · 玉:${kingNames[rules.kingCapture]}`,
     `手数上限:${rules.moveLimit ?? DEFAULT_MOVE_LIMIT}`,
@@ -57,6 +59,7 @@ export async function readSharedRecord(text: string, cancelled: () => boolean = 
   let version: number|undefined, recovery: Rules['selfCapture'], king: Rules['kingCapture']|undefined;
   let limit: number|undefined, players: Players|undefined, startedAt: string|null = null;
   let dateSeen = false, ending: string|undefined;
+  let handicap:Handicap|undefined;
   const labels: string[] = [], warnings: string[] = [];
   const once = (exists: boolean) => { if (exists) throw Error('設定や結果が重複しています。1局分の棋譜を貼り付けてください。'); };
   for (const line of lines) {
@@ -72,7 +75,15 @@ export async function readSharedRecord(text: string, cancelled: () => boolean = 
     if (labels.length || ending !== undefined) throw Error('指し手または結果を読み取れません。棋譜の末尾まで正しく貼り付けてください。');
     if (line.startsWith('棋譜形式:')) {
       once(version !== undefined); version = Number(line.slice(5));
-      if (version !== 1) throw Error('この棋譜形式には対応していません。アプリを更新してください。');
+      if (version !== 1 && version !== 2) throw Error('この棋譜形式には対応していません。アプリを更新してください。');
+      continue;
+    }
+    if(line.startsWith('手合割:')){
+      once(handicap!==undefined);
+      const match=/^手合割:(.+?)\s*·\s*上手:(先手|後手)$/.exec(line);
+      const kind=HANDICAP_KINDS.find(k=>HANDICAPS[k].label===match?.[1]);
+      if(!match||!kind)throw Error('駒落ちの種類または上手を読み取れません。');
+      handicap={kind,side:match[2]==='先手'?'sente':'gote'};
       continue;
     }
     if (line.startsWith('対局日時:')) {
@@ -121,7 +132,8 @@ export async function readSharedRecord(text: string, cancelled: () => boolean = 
     throw Error('このアプリの棋譜として読み取れない行があります。共有文を省略せず貼り付けてください。');
   }
   if (king === undefined || recovery === undefined) throw Error('玉と自駒回収のルールがありません。共有文の見出しも貼り付けてください。');
-  if (version === 1 && (limit === undefined || !players || !dateSeen || ending === undefined)) throw Error('棋譜の設定または結果が欠けています。全文を貼り付けてください。');
+  if ((version === 1 || version === 2) && (limit === undefined || !players || !dateSeen || ending === undefined)) throw Error('棋譜の設定または結果が欠けています。全文を貼り付けてください。');
+  if((version===2)!==(handicap!==undefined))throw Error('駒落ちの設定と棋譜形式が一致しません。全文を貼り付けてください。');
   if (!labels.length && !ending?.includes('投了')) throw Error('指し手がありません。');
   if (limit === undefined) {
     // Legacy archives did not include the limit. Preserve their stated ending and all plies.
@@ -129,10 +141,10 @@ export async function readSharedRecord(text: string, cancelled: () => boolean = 
     if (!validMoveLimit(limit)) throw Error('この旧形式の棋譜では手数上限を復元できません。新しい形式で共有し直してください。');
     warnings.push(`旧形式には手数上限がないため、再生用の上限を${limit}手として保存します。`);
   }
-  const rules: Rules = {kingCapture:king, selfCapture:recovery, moveLimit:limit};
+  const rules: Rules = {kingCapture:king, selfCapture:recovery, moveLimit:limit,...(handicap?{handicap}:{})};
   const settings = withPlayers({...DEFAULT_SETTINGS, rules, flipped:false, book:false}, players ?? {sente:parsePlayer('人間'),gote:parsePlayer('人間')});
   // Historical saves may have acquired a lower limit after their moves were played.
-  let game = createGame({kingCapture:king,selfCapture:recovery});
+  let game = createGame({kingCapture:king,selfCapture:recovery,...(handicap?{handicap}:{})});
   for (let index = 0; index < labels.length; index++) {
     if (index % 16 === 0) await new Promise<void>(resolve => setTimeout(resolve, 0));
     if (cancelled()) throw Error('読み込みを中止しました。');

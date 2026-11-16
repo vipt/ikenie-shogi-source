@@ -1,4 +1,5 @@
 import {validSession,type GameSession} from './session';
+import {validHandicap} from './handicap';
 import {bookSupported} from './book-rules';
 import {preparePlayers,type Players} from './match-settings';
 import {replayStep,type RedoStep} from './history';
@@ -8,11 +9,11 @@ import {DEFAULT_CPU_LEVEL,legacyCpuLevel,validCpuLevel,type CpuLevel} from './cp
 
 export type Settings = { players?:Players; mode: 'cpu' | 'local' | 'watch'; rules: Rules; sound: boolean; moveSound: boolean; moveSoundVolume: number; showEvaluation: boolean; flipped: boolean; difficulty: Difficulty; cpuLevel?:CpuLevel; humanSide?:Side; watchCpuLevels?:Record<Side,CpuLevel>; cpuEngine: 'native'|'classic'; model: 'hao'|'trained'; book: boolean };
 export const DEFAULT_SETTINGS: Settings = { mode: 'cpu', rules: { kingCapture: 'all', moveLimit: DEFAULT_MOVE_LIMIT }, sound: true, moveSound: true, moveSoundVolume: 75, showEvaluation: true, flipped: false, difficulty: 'strong', cpuLevel:DEFAULT_CPU_LEVEL, humanSide:'sente', cpuEngine: 'native', model: 'hao', book: false };
-type SavedGame = { version: 1; settings: Settings; moves: Move[]; resigned: 'sente' | 'gote' | null; redo?:RedoStep[]; session?:GameSession };
+type SavedGame = { version: 1|2; settings: Settings; moves: Move[]; resigned: 'sente' | 'gote' | null; redo?:RedoStep[]; session?:GameSession };
 
 export function serialize(game: Game, settings: Settings, redo:RedoStep[] = [],session?:GameSession): string {
   const data: SavedGame = {
-    version: 1, settings, ...(redo.length?{redo}:{}), ...(session?{session}:{}), moves: game.log.map(r => r.move),
+    version: settings.rules.handicap ? 2 : 1, settings, ...(redo.length?{redo}:{}), ...(session?{session}:{}), moves: game.log.map(r => r.move),
     resigned: game.result?.reason === 'resign' ? (game.result.winner === 'sente' ? 'gote' : 'sente') : null,
   };
   return JSON.stringify(data);
@@ -20,12 +21,13 @@ export function serialize(game: Game, settings: Settings, redo:RedoStep[] = [],s
 
 export function deserialize(raw: string): { game: Game; settings: Settings; redo?:RedoStep[];session?:GameSession } {
   const data = JSON.parse(raw) as SavedGame;
-  if (!data || data.version !== 1 || !Array.isArray(data.moves) || data.moves.length > 5000 ||
+  if (!data || ![1,2].includes(data.version) || !Array.isArray(data.moves) || data.moves.length > 5000 ||
     !['cpu', 'local', 'watch'].includes(data.settings?.mode) ||
     !['enemy', 'all', 'none'].includes(data.settings?.rules?.kingCapture) ||
     typeof data.settings.sound !== 'boolean' || typeof data.settings.flipped !== 'boolean' ||
     ![null, 'sente', 'gote'].includes(data.resigned)) throw new Error('保存データを読み込めませんでした。');
   if(data.session!==undefined&&!validSession(data.session))throw new Error('対局IDが不正です。');
+  if((data.version===2||data.settings.rules.handicap!==undefined)&&!validHandicap(data.settings.rules.handicap))throw new Error('駒落ちの設定が不正です。');
   if (data.settings.difficulty === undefined) data.settings.difficulty = 'strong';
   if (!['easy', 'normal', 'strong'].includes(data.settings.difficulty)) throw new Error('CPUの強さ設定が不正です。');
   if(data.settings.cpuLevel===undefined)data.settings.cpuLevel=legacyCpuLevel(data.settings.difficulty);

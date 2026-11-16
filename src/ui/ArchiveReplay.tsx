@@ -2,6 +2,7 @@ import React,{useRef,useState,useEffect} from 'react';
 import {View,Text,Pressable,FlatList,StyleSheet} from 'react-native';
 import {Board} from './Board';
 import {colors} from './theme';
+import {handicapLabel} from '../game/handicap';
 import {HAND_KINDS,LABELS,SIDE_LABEL,isInCheck,type Game,type Side} from '../game/engine';
 import {selfCaptureCounts} from '../game/presentation';
 const noop=()=>{};const noOrigin=async()=>null;
@@ -26,6 +27,7 @@ export function ArchiveReplay({game,initialFlipped,result,onBack,onShare,onDelet
  const toolbar=<View testID="archive-replay-toolbar" onLayout={e=>setToolbarHeight(e.nativeEvent.layout.height)} style={styles.toolbar}>
   <View style={styles.actions}><ArchiveAction id="archive-back" label="← 一覧" onPress={onBack}/><ArchiveAction id="archive-flip" label="⇅ 反転" onPress={()=>setFlipped(f=>!f)}/><ArchiveAction id="archive-share" label="共有" onPress={onShare}/><ArchiveAction id="archive-delete" label="削除" onPress={onDelete}/></View>
   <Text testID="archive-result" maxFontSizeMultiplier={1.3} style={styles.result}>{result} · {game.log.length}手</Text>
+  {game.position.rules.handicap&&<Text testID="archive-handicap" maxFontSizeMultiplier={1.3} style={styles.result}>{handicapLabel(game.position.rules)}</Text>}
  </View>;
  const board=<View testID="archive-fixed-board" style={{width:panelWidth,flexShrink:0}}>
   <View onLayout={e=>setTopHeight(e.nativeEvent.layout.height)} style={styles.boardTop}>

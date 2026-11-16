@@ -1,6 +1,8 @@
 import {newSession} from './src/game/session';
 import {ArchiveScreen} from './src/ui/ArchiveScreen';
 import {bookSupported} from './src/game/book-rules';
+import {handicapLabel} from './src/game/handicap';
+import {HandicapSelector} from './src/ui/HandicapSelector';
 import {stageCpuMove,completeCpuMove,type AnimatedTimeline,type BoardPoint} from './src/game/cpu-animation';
 import {replaceGame,takeBackHistory,goForwardHistory} from './src/game/history';
 import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
@@ -323,6 +325,7 @@ function AppContent() {
             </View>
             <Pressable testID="open-archives" accessibilityRole="button" onPress={()=>{setPaused(true);setNotice('');setDialog('archives');}} style={{paddingVertical:10,paddingHorizontal:8}}><Text style={styles.textLink}>対局履歴</Text></Pressable>
           </View>
+          {settings.rules.handicap&&<Text testID="game-handicap" style={[styles.caption,{width:boardWidth,marginBottom:10}]}>{handicapLabel(settings.rules)} · 上手から開始</Text>}
           {settings.showEvaluation&&<View testID="evaluation-panel" style={[styles.evaluationPanel,{width:boardWidth}]}>
             <View style={styles.evaluationHeading}><Text style={styles.caption}>形勢の目安</Text><Text style={styles.tiny}>{!hasStarted?'開始前':game.result?'対局終了':evaluationFailed?'評価できません':!percentages?'計算中…':cpuAnimation?'着手中':evaluation?.game===game?'解析中':''}</Text></View>
             <View style={styles.evaluationHeading}>
@@ -417,6 +420,11 @@ function AppContent() {
             <Button secondary testID="open-licenses" onPress={()=>setDialog('licenses')}>使用ソフトウェア・ライセンス</Button>
             <Button onPress={()=>setDialog(null)}>盤に戻る</Button>
           </> : dialog === 'new' ? <>
+            <HandicapSelector value={draft.rules.handicap} onChange={handicap=>setDraft(d=>{
+              const {handicap:previous,...base}=d.rules;
+              const rules={...base,...(handicap?{handicap}:{})};
+              return {...d,rules,book:d.book&&bookSupported(rules)};
+            })}/>
             <Text style={styles.caption}>先手・後手それぞれのプレイヤーを設定します。</Text>
             {(['sente','gote'] as const).map(side=>{
               const player=playerFor(draft,side);
@@ -439,7 +447,7 @@ function AppContent() {
               {!NATIVE_AVAILABLE&&<Text style={styles.caption}>Web版は簡易CPUで動作します。</Text>}
               {NATIVE_AVAILABLE&&<>
                 <View style={styles.switchRow}><Text style={styles.bodyText}>専用定跡を使う</Text><Switch testID="opening-book-switch" accessibilityLabel="専用定跡を使う" value={draft.book} disabled={!bookSupported(draft.rules)} onValueChange={book=>setDraft(d=>({...d,book}))} trackColor={{true:colors.green}} /></View>
-                <Text style={styles.caption}>両者の回収がONのときに使えます。玉のルールに合う定跡から、複数の初手・手順を選びます。</Text>
+                <Text style={styles.caption}>平手で両者の回収がONのときに使えます。玉のルールに合う定跡から、複数の初手・手順を選びます。</Text>
               </>}
             </>}
             <Text style={styles.fieldLabel}>引き分けの基準手数</Text>

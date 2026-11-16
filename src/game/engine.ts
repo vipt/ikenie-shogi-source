@@ -1,10 +1,11 @@
 /** Pure rules engine. Squares run left-to-right (9→1), top-to-bottom (一→九). */
+import {HANDICAPS, validHandicap, type Handicap} from './handicap';
 export type Side = 'sente' | 'gote';
 export type Kind = 'P' | 'L' | 'N' | 'S' | 'G' | 'B' | 'R' | 'K';
 export type HandKind = Exclude<Kind, 'K'>;
 export type Piece = { kind: Kind; side: Side; promoted: boolean };
 export type Hand = Record<HandKind, number>;
-export type Rules = { kingCapture: 'enemy' | 'none' | 'all'; selfCapture?: Side | 'both' | 'none'; moveLimit?: number };
+export type Rules = { kingCapture: 'enemy' | 'none' | 'all'; selfCapture?: Side | 'both' | 'none'; moveLimit?: number; handicap?:Handicap };
 export type Position = {
   board: (Piece | null)[];
   hands: Record<Side, Hand>;
@@ -43,7 +44,11 @@ export function initialPosition(rules: Rules = DEFAULT_RULES): Position {
   board[16] = { kind: 'B', side: 'gote', promoted: false };
   board[64] = { kind: 'B', side: 'sente', promoted: false };
   board[70] = { kind: 'R', side: 'sente', promoted: false };
-  return { board, hands: { sente: emptyHand(), gote: emptyHand() }, turn: 'sente', rules: { ...rules } };
+  if(rules.handicap!==undefined){
+    if(!validHandicap(rules.handicap))throw Error('駒落ちの設定が不正です。');
+    for(const square of HANDICAPS[rules.handicap.kind].removed)board[rules.handicap.side==='gote'?square:80-square]=null;
+  }
+  return { board, hands: { sente: emptyHand(), gote: emptyHand() }, turn: rules.handicap?.side??'sente', rules: { ...rules } };
 }
 
 const gold = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, 0]];
