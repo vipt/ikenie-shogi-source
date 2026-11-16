@@ -15,7 +15,7 @@ import {
 } from './src/game/engine';
 import {humanSide,cpuLevelFor,isCpuTurn,undoPlies,cpuMatchDescription,playerFor,updatePlayer,recoveryEnabled,updateRecovery} from './src/game/match-settings';
 import {CpuLevelSelector} from './src/ui/CpuLevelSelector';
-import { startCpuSearch, startPositionEvaluation, engineLabel, NATIVE_AVAILABLE, RECOVERY_LABELS } from './src/game/mobile-cpu';
+import { startCpuSearch, startPositionEvaluation, NATIVE_AVAILABLE, RECOVERY_LABELS } from './src/game/mobile-cpu';
 import licenseText from './src/game/licenses';
 import { DEFAULT_SETTINGS, loadGame, saveGame, archiveGame, type Settings } from './src/game/storage';
 import {newGameSettings} from './src/game/persistence';
@@ -26,6 +26,7 @@ import {advantagePercent,resultPercent,selfCaptureCounts} from './src/game/prese
 import {useMoveSound} from './src/ui/useMoveSound';
 import {EvaluationBar} from './src/ui/EvaluationBar';
 import appConfig from './app.json';
+import {formatSharedRecord} from './src/game/shared-record';
 
 type Selection = { square: number } | { hand: HandKind } | null;
 type Dialog = 'preferences' | 'rules' | 'new' | 'resign' | 'history' | 'archives' | 'licenses' | null;
@@ -249,9 +250,7 @@ function AppContent() {
     setTimeline(current=>goForwardHistory(current));setSelection(null);setPromotion(null);setNotice('');
   }
   async function shareRecord() {
-    const header = '生贄将棋\n'+RECOVERY_LABELS[settings.rules.selfCapture??'both']+'\n'+ruleDescriptions[settings.rules.kingCapture]+'\n'+engineLabel(settings)+' · '+cpuMatchDescription(settings)+'\n手数上限：'+settings.rules.moveLimit+'手を超えたら引き分け\n';
-    const moves = game.log.map((r, i) => `${i + 1} ${r.label}`).join('\n');
-    try { await Share.share({ message: header + moves + (game.result ? `\n${reasons[game.result.reason]}` : '') }); }
+    try { await Share.share({ message: formatSharedRecord(game,settings,session.startedAt) }); }
     catch { setNotice('この環境では棋譜の共有を開けませんでした。'); }
   }
 
