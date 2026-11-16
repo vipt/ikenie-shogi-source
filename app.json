@@ -1,0 +1,48 @@
+{
+  "expo": {
+    "name": "生贄将棋",
+    "slug": "meguru-shogi",
+    "version": "1.2.26",
+    "icon": "./assets/icon.png",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "UISupportedInterfaceOrientations": [
+          "UIInterfaceOrientationPortrait"
+        ]
+      },
+      "buildNumber": "26",
+      "bundleIdentifier": "com.megurushogi.app"
+    },
+    "android": {
+      "package": "net.vipt.ikenie_shogi",
+      "versionCode": 29
+    },
+    "web": {
+      "bundler": "metro",
+      "name": "生贄将棋",
+      "shortName": "生贄将棋",
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "0dd9a71b-8b32-4c5a-a5aa-397c6cd57364"
+      }
+    },
+    "owner": "motokit",
+    "plugins": [
+      "./plugins/withMeguruEngine.cjs",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": false,
+          "recordAudioAndroid": false,
+          "enableBackgroundPlayback": false,
+          "enableBackgroundRecording": false
+        }
+      ]
+    ]
+  }
+}

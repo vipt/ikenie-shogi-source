@@ -1,0 +1,17 @@
+{
+  "platforms": [
+    "apple",
+    "android"
+  ],
+  "apple": {
+    "modules": [
+      "MeguruEngineModule"
+    ],
+    "podspecPath": "MeguruEngine.podspec"
+  },
+  "android": {
+    "modules": [
+      "expo.modules.meguru.MeguruEngineModule"
+    ]
+  }
+}

@@ -1,0 +1,238 @@
+{
+  "board": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    {
+      "kind": "S",
+      "promoted": false,
+      "side": "gote"
+    },
+    {
+      "kind": "N",
+      "promoted": false,
+      "side": "gote"
+    },
+    null,
+    {
+      "kind": "L",
+      "promoted": false,
+      "side": "gote"
+    },
+    null,
+    {
+      "kind": "P",
+      "promoted": false,
+      "side": "gote"
+    },
+    null,
+    {
+      "kind": "R",
+      "promoted": true,
+      "side": "sente"
+    },
+    null,
+    null,
+    {
+      "kind": "B",
+      "promoted": false,
+      "side": "gote"
+    },
+    null,
+    {
+      "kind": "P",
+      "promoted": false,
+      "side": "gote"
+    },
+    null,
+    {
+      "kind": "K",
+      "promoted": false,
+      "side": "gote"
+    },
+    {
+      "kind": "P",
+      "promoted": false,
+      "side": "gote"
+    },
+    {
+      "kind": "N",
+      "promoted": false,
+      "side": "sente"
+    },
+    null,
+    null,
+    {
+      "kind": "P",
+      "promoted": false,
+      "side": "gote"
+    },
+    {
+      "kind": "P",
+      "promoted": false,
+      "side": "gote"
+    },
+    null,
+    null,
+    {
+      "kind": "B",
+      "promoted": false,
+      "side": "gote"
+    },
+    null,
+    {
+      "kind": "P",
+      "promoted": false,
+      "side": "gote"
+    },
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    {
+      "kind": "L",
+      "promoted": false,
+      "side": "sente"
+    },
+    {
+      "kind": "G",
+      "promoted": false,
+      "side": "sente"
+    },
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    {
+      "kind": "P",
+      "promoted": false,
+      "side": "sente"
+    },
+    {
+      "kind": "P",
+      "promoted": false,
+      "side": "sente"
+    },
+    {
+      "kind": "P",
+      "promoted": false,
+      "side": "sente"
+    },
+    {
+      "kind": "P",
+      "promoted": false,
+      "side": "sente"
+    },
+    {
+      "kind": "G",
+      "promoted": false,
+      "side": "sente"
+    },
+    {
+      "kind": "P",
+      "promoted": false,
+      "side": "sente"
+    },
+    {
+      "kind": "P",
+      "promoted": false,
+      "side": "sente"
+    },
+    {
+      "kind": "P",
+      "promoted": false,
+      "side": "sente"
+    },
+    null,
+    {
+      "kind": "S",
+      "promoted": false,
+      "side": "sente"
+    },
+    {
+      "kind": "K",
+      "promoted": false,
+      "side": "sente"
+    },
+    null,
+    null,
+    null,
+    {
+      "kind": "N",
+      "promoted": true,
+      "side": "gote"
+    },
+    {
+      "kind": "R",
+      "promoted": false,
+      "side": "gote"
+    },
+    null,
+    null,
+    null,
+    null,
+    {
+      "kind": "G",
+      "promoted": false,
+      "side": "sente"
+    },
+    {
+      "kind": "S",
+      "promoted": false,
+      "side": "gote"
+    },
+    null,
+    null,
+    {
+      "kind": "N",
+      "promoted": false,
+      "side": "sente"
+    },
+    {
+      "kind": "L",
+      "promoted": false,
+      "side": "sente"
+    }
+  ],
+  "hands": {
+    "sente": {
+      "P": 2,
+      "L": 0,
+      "N": 0,
+      "S": 1,
+      "G": 1,
+      "B": 0,
+      "R": 0
+    },
+    "gote": {
+      "P": 3,
+      "L": 1,
+      "N": 0,
+      "S": 0,
+      "G": 0,
+      "B": 0,
+      "R": 0
+    }
+  },
+  "turn": "gote",
+  "rules": {
+    "kingCapture": "enemy",
+    "selfCapture": "both"
+  }
+}

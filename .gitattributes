@@ -1,0 +1,10 @@
+* text=auto eol=lf
+*.nnue binary
+*.db binary
+*.png binary
+*.webp binary
+*.ico binary
+*.wav binary
+*.jpg binary
+*.jpeg binary
+*.gif binary

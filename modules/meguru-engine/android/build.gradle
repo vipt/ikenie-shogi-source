@@ -1,0 +1,17 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+group = 'expo.modules.meguru'
+version = '1.2.23'
+android {
+  namespace 'expo.modules.meguru'
+  defaultConfig {
+    minSdk 26
+    consumerProguardFiles 'consumer-rules.pro'
+    externalNativeBuild { cmake { cppFlags '-std=c++17'; arguments '-DANDROID_STL=c++_shared' } }
+    ndk { abiFilters 'arm64-v8a', 'x86_64' }
+  }
+  externalNativeBuild { cmake { path '../cpp/CMakeLists.txt'; version '3.22.1' } }
+  sourceSets { main { assets.srcDirs = ['../assets'] } }
+}

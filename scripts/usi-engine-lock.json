@@ -1,0 +1,33 @@
+{
+  "engine": {
+    "name": "YaneuraOu NNUE V9.00Git",
+    "release": "https://github.com/yaneurao/YaneuraOu/releases/tag/V9.00",
+    "url": "https://github.com/yaneurao/YaneuraOu/releases/download/V9.00/yaneuraou-V900-git-win64-all.7z",
+    "archiveSha256": "6517997dd05ba049a2244a828216967a0ad351d975ec52a0f358e2883197dec6",
+    "executable": ".tools/engines/yaneuraou-v9.00/NNUE_halfkp_256x2_32_32/YaneuraOu_NNUE_halfkp_256x2_32_32-V900Git_AVX2.exe",
+    "sha256": "6933dadadb8294a311c79a547768d555528870a1c20f365667ba8a32c3a6c068",
+    "archiveEntry": "NNUE_halfkp_256x2_32_32/YaneuraOu_NNUE_halfkp_256x2_32_32-V900Git_AVX2.exe"
+  },
+  "evaluation": {
+    "name": "Háo (2023-05-08)",
+    "release": "https://github.com/nodchip/tanuki-/releases/tag/tanuki-.halfkp_256x2-32-32.2023-05-08",
+    "url": "https://github.com/nodchip/tanuki-/releases/download/tanuki-.halfkp_256x2-32-32.2023-05-08/tanuki-.halfkp_256x2-32-32.2023-05-08.7z",
+    "archiveSha256": "f16dc66c529857bf08fce8cee4f1e53a6993297644100267a6ccccd62e43dbba",
+    "file": ".tools/engines/hao/eval/nn.bin",
+    "sha256": "1141d275bceec911156801f27303dc9ff5beb24f4f59144cc069306c59e80782",
+    "fvScale": 20
+  },
+  "options": {
+    "Threads": 1,
+    "USI_Hash": 64,
+    "USI_Ponder": false,
+    "USI_OwnBook": false,
+    "BookFile": "no_book",
+    "EnteringKingRule": "NoEnteringKing",
+    "NetworkDelay": 0,
+    "NetworkDelay2": 0,
+    "ResignValue": 99999,
+    "MultiPV": 1
+  }
+}
+

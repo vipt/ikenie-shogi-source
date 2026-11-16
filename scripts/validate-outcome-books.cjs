@@ -1,0 +1,17 @@
+const {execFileSync}=require('node:child_process'),fs=require('node:fs'),assert=require('node:assert/strict'),crypto=require('node:crypto');
+const adb='C:/Users/motok/AppData/Local/Android/Sdk/platform-tools/adb.exe',remote='/data/local/tmp/meguru-outcome-books',serial='emulator-5580';
+const run=(...a)=>execFileSync(adb,['-s',serial,...a],{encoding:'utf8',windowsHide:true,timeout:120000,maxBuffer:12*1024*1024});
+run('shell','mkdir','-p',remote+'/hao');
+for(const [from,to] of [['.tools/m-x64/meguru_cli',remote+'/meguru_cli'],['C:/Users/motok/AppData/Local/Android/Sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/x86_64-linux-android/libc++_shared.so',remote+'/libc++_shared.so'],['modules/meguru-engine/assets/hao.nnue',remote+'/hao/nn.bin'],['modules/meguru-engine/assets/user_book1.db',remote+'/hao/user_book1.db'],['modules/meguru-engine/assets/king_recovery_book.db',remote+'/hao/king_recovery_book.db']])run('push',from,to);
+run('shell','chmod','755',remote+'/meguru_cli');const results=[];
+for(const [rule,mask,version,original] of [['enemy',3,'recovery-book-v3','recovery-book-v2'],['all',7,'king-recovery-book-v2','king-recovery-book-v1']]){
+ const m=JSON.parse(fs.readFileSync(`artifacts/engines/${version}/book-manifest.json`)),before=JSON.parse(fs.readFileSync(`artifacts/engines/${original}/book-manifest.json`));assert.equal(m.entries.length,before.entries.length);assert.equal(m.moveCount,before.moveCount);
+ for(let i=0;i<m.entries.length;i++){const a=m.entries[i],b=before.entries[i];assert.equal(a.sfen,b.sfen);assert.deepEqual(a.moves.map(({weight,...move})=>move),b.moves);if(a.history.length)assert(a.moves.every(v=>v.weight===undefined));}
+ const sampleSize=1200,input=['stack',...Array(sampleSize).fill('search'),...m.entries.map(e=>'analyze position sfen '+e.sfen),'quit'].join('\n')+'\n';
+ const out=execFileSync(adb,['-s',serial,'shell',`LD_LIBRARY_PATH=${remote} ${remote}/meguru_cli ${remote}/hao ${mask} 100 book`],{input,encoding:'utf8',windowsHide:true,timeout:120000,maxBuffer:12*1024*1024});fs.writeFileSync(`.tools/outcome-book-${rule}-native.log`,out);assert(!out.includes('Error!'));const analyses=out.split(/\r?\n/).filter(s=>s.startsWith('MOBILE_RESULT ')).map(s=>JSON.parse(s.slice(14)));assert.equal(analyses.length,sampleSize+m.entries.length);
+ const rootCounts={};for(const a of analyses.slice(0,sampleSize)){assert.equal(a.nodes,0);assert(m.rootMoves.some(v=>v.move===a.bestmove));rootCounts[a.bestmove]=(rootCounts[a.bestmove]||0)+1;}
+ const total=m.rootMoves.reduce((n,v)=>n+v.weight,0),frequencies=m.rootMoves.map(v=>{const p=v.weight/total,actual=rootCounts[v.move]??0,expected=sampleSize*p;assert(Math.abs(actual-expected)<6*Math.sqrt(sampleSize*p*(1-p))+2,'Weight not applied: '+v.move);return {move:v.move,weight:v.weight,expectedProbability:p,observedCount:actual};});
+ for(let i=0;i<m.entries.length;i++){const a=analyses[sampleSize+i];assert.equal(a.nodes,0,'Missing book entry');assert(m.entries[i].moves.some(v=>v.move===a.bestmove));}
+ results.push({rule,bookSha256:m.sha256,positionsVerified:m.entries.length,initialSamples:sampleSize,frequencies,allNonWeightDataPreserved:true});
+}
+const report={createdAt:new Date().toISOString(),passed:true,platform:'Android x86_64 emulator; mobile native C API',results};fs.writeFileSync('reports/outcome-books-native.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report));

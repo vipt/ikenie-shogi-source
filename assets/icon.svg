@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <rect width="1024" height="1024" fill="#2F5D48"/>
+  <path d="M512 174 710 284 764 752H260L314 284Z" fill="#FFF0C9"/>
+  <text x="512" y="645" text-anchor="middle" font-family="Yu Mincho,serif" font-weight="bold" font-size="380" fill="#2F5D48">生</text>
+  <path d="M790 604a305 305 0 0 1-390 271" fill="none" stroke="#B8CB98" stroke-width="42" stroke-linecap="round"/>
+  <path d="m411 824-57 39 53 63" fill="none" stroke="#B8CB98" stroke-width="42" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

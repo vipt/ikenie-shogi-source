@@ -1,0 +1,99 @@
+{
+  "version": "mobile-1",
+  "baseEngineSha256": "33edf1bdb2f52ab023202b48a0f31b9a48bc11b11da75b362a1cf22a99b3b049",
+  "models": {
+    "hao": {
+      "from": ".tools/engines/hao/eval/nn.bin",
+      "sha": "1141d275bceec911156801f27303dc9ff5beb24f4f59144cc069306c59e80782"
+    },
+    "trained": {
+      "from": "artifacts/engines/recovery-v1/eval/nn.bin",
+      "sha": "fff2b55c373bf1d3bc2fb10d99ea4161329c3eedb566fa0dfc2c13c1450a266e"
+    }
+  },
+  "bookSha256": "9b4586e7dc1a9952bd70a96da58dbb41672559e01fab283166a7ff73976efdfa",
+  "rule": "king enemy/all; rule flags bits 0/1 recovery sides, bit 2 king recovery; distinct books for flags=3 and flags=7",
+  "sources": [
+    "types.cpp",
+    "bitboard.cpp",
+    "misc.cpp",
+    "movegen.cpp",
+    "position.cpp",
+    "usi.cpp",
+    "usioption.cpp",
+    "thread.cpp",
+    "tt.cpp",
+    "movepick.cpp",
+    "timeman.cpp",
+    "memory.cpp",
+    "engine.cpp",
+    "search.cpp",
+    "score.cpp",
+    "benchmark.cpp",
+    "tune.cpp",
+    "book/book.cpp",
+    "book/apery_book.cpp",
+    "book/policybook.cpp",
+    "extra/bitop.cpp",
+    "extra/long_effect.cpp",
+    "extra/sfen_packer.cpp",
+    "mate/mate.cpp",
+    "mate/mate1ply_without_effect.cpp",
+    "mate/mate1ply_with_effect.cpp",
+    "mate/mate_solver.cpp",
+    "eval/evaluate_bona_piece.cpp",
+    "eval/evaluate.cpp",
+    "eval/evaluate_io.cpp",
+    "eval/evaluate_mir_inv_tools.cpp",
+    "eval/material/evaluate_material.cpp",
+    "testcmd/unit_test.cpp",
+    "testcmd/mate_test_cmd.cpp",
+    "testcmd/normal_test_cmd.cpp",
+    "book/makebook.cpp",
+    "book/makebook2015.cpp",
+    "book/makebook2025.cpp",
+    "learn/learner.cpp",
+    "learn/learning_tools.cpp",
+    "learn/multi_think.cpp",
+    "eval/nnue/evaluate_nnue.cpp",
+    "eval/nnue/evaluate_nnue_learner.cpp",
+    "eval/nnue/nnue_test_command.cpp",
+    "eval/nnue/features/k.cpp",
+    "eval/nnue/features/p.cpp",
+    "eval/nnue/features/half_kp.cpp",
+    "eval/nnue/features/half_kp_vm.cpp",
+    "eval/nnue/features/half_relative_kp.cpp",
+    "eval/nnue/features/half_kpe9.cpp",
+    "eval/nnue/features/pe9.cpp",
+    "engine/yaneuraou-engine/yaneuraou-search.cpp"
+  ],
+  "bookVersion": 3,
+  "bookModelSha256": "1141d275bceec911156801f27303dc9ff5beb24f4f59144cc069306c59e80782",
+  "bookSelection": {
+    "bookEvalDiff": 150,
+    "considerBookMoveCount": true,
+    "narrowBook": false,
+    "ignoreRate": 0,
+    "description": "Empirical root weights trained on 32 games per root and accepted on an independent 16 games per root; all later move counts remain one."
+  },
+  "kingRecoveryBook": {
+    "file": "king_recovery_book.db",
+    "version": 1,
+    "sha256": "b0fe201abe43f263d85933aa64b9ed487836d0747c580a38db94701cc741982c",
+    "modelSha256": "1141d275bceec911156801f27303dc9ff5beb24f4f59144cc069306c59e80782",
+    "rules": {
+      "kingCapture": "all",
+      "selfCapture": "both"
+    },
+    "positions": 595,
+    "moves": 626,
+    "selection": {
+      "bookEvalDiff": 150,
+      "considerBookMoveCount": true,
+      "narrowBook": false,
+      "ignoreRate": 0,
+      "description": "All counts remain one; uniform selection retained after inconclusive independent confirmation."
+    }
+  },
+  "outcomeValidationReport": "reports/opening-outcomes-analysis-v2.json"
+}

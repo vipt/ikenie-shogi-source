@@ -1,0 +1,19 @@
+// Supply your own signing material through paths, never commit keys or passwords.
+gradle.beforeProject { p ->
+    p.plugins.withId('com.android.application') {
+        p.extensions.getByName('androidComponents').finalizeDsl { android ->
+            def required = { name ->
+                def value = System.getenv(name)
+                if (!value) throw new GradleException("Missing environment variable: ${name}")
+                return value
+            }
+            def signing = android.signingConfigs.create('sourceRelease')
+            signing.storeFile = new File(required('MEGURU_KEYSTORE'))
+            signing.keyAlias = new File(required('MEGURU_KEY_ALIAS_FILE')).text.trim()
+            signing.storePassword = new File(required('MEGURU_STORE_PASSWORD_FILE')).text.trim()
+            signing.keyPassword = new File(required('MEGURU_KEY_PASSWORD_FILE')).text.trim()
+            android.buildTypes.getByName('release').signingConfig = signing
+            println("RELEASE applicationId=${android.defaultConfig.applicationId} versionCode=${android.defaultConfig.versionCode} versionName=${android.defaultConfig.versionName}")
+        }
+    }
+}

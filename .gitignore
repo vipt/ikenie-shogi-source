@@ -1,0 +1,36 @@
+node_modules/
+.expo/
+dist/
+web-build/
+.tools/
+artifacts/
+*.log
+.DS_Store
+/android/
+/ios/
+*.tsbuildinfo
+reports/*.part-*.json
+reports/*.progress-*.json
+
+modules/**/android/build/
+modules/**/android/.cxx/
+
+# Credentials and machine-local configuration
+.env
+.env.*
+!.env.example
+credentials.json
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.pem
+*.key
+*.pass
+local.properties
+
+# Generated match logs, test outputs and device records stay local.
+/reports/*
+!/reports/*.md
+__pycache__/
+*.pyc

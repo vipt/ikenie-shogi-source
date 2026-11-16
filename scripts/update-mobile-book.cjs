@@ -1,0 +1,10 @@
+const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
+const root=path.resolve(__dirname,'..'),dir=path.join(root,'artifacts/engines/recovery-book-v3');
+const manifest=JSON.parse(fs.readFileSync(path.join(dir,'book-manifest.json')));
+const db=fs.readFileSync(path.join(dir,'book/user_book1.db'));
+if(crypto.createHash('sha256').update(db).digest('hex')!==manifest.sha256||!manifest.verifiedMoves||manifest.rules.kingCapture!=='enemy'||manifest.rules.selfCapture!=='both')throw Error('Book audit mismatch');
+fs.writeFileSync(path.join(root,'modules/meguru-engine/assets/user_book1.db'),db);
+const f=path.join(root,'modules/meguru-engine/engine-manifest.json'),m=JSON.parse(fs.readFileSync(f));
+m.bookSha256=manifest.sha256;m.bookVersion=manifest.version;m.bookModelSha256=manifest.modelSha256;m.bookSelection=manifest.selection;
+fs.writeFileSync(f,JSON.stringify(m,null,2)+'\n');
+console.log(JSON.stringify({positions:manifest.positions,moves:manifest.moveCount,initialMoves:manifest.rootMoves.length,sha256:manifest.sha256}));

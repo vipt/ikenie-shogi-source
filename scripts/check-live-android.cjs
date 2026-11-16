@@ -1,0 +1,21 @@
+const fs=require('node:fs'),assert=require('node:assert/strict'),{execFileSync}=require('node:child_process');
+const serial=process.argv[2];assert(serial);const adbPath='C:/Users/motok/AppData/Local/Android/Sdk/platform-tools/adb.exe',pkg='com.megurushogi.app';
+const adb=(...a)=>execFileSync(adbPath,['-s',serial,...a],{encoding:'utf8',windowsHide:true,timeout:30000});const delay=ms=>new Promise(r=>setTimeout(r,ms));
+async function nodes(){for(let i=0;i<4;i++){const out=adb('shell','uiautomator','dump','/sdcard/meguru-live-ui.xml');if(!out.includes('ERROR')){const xml=adb('exec-out','cat','/sdcard/meguru-live-ui.xml');return [...xml.matchAll(/<node\s+([^>]+)>/g)].map(m=>Object.fromEntries([...m[1].matchAll(/([\w-]+)="([^"]*)"/g)].map(v=>[v[1],v[2]])));}await delay(300);}throw Error('No fresh UI dump');}
+const bounds=n=>n?.bounds?.match(/-?\d+/g).map(Number);const find=(ns,id)=>ns.find(n=>{const b=bounds(n);return (n['resource-id']===id||n.text===id||n['content-desc']===id)&&b&&b[2]>b[0]&&b[3]>b[1];});
+async function tap(id){const ns=await nodes(),n=find(ns,id);assert(n,'Missing '+id);const b=bounds(n);adb('shell','input','tap',String(Math.round((b[0]+b[2])/2)),String(Math.round((b[1]+b[3])/2)));await delay(250);}
+async function top(){for(let i=0;i<7;i++){const ns=await nodes();if(find(ns,'open-preferences'))return;const b=bounds(ns[0]);adb('shell','input','swipe',String(Math.round(b[2]*.62)),String(Math.round(b[3]*.2)),String(Math.round(b[2]*.62)),String(Math.round(b[3]*.85)),'300');}throw Error('Header not found');}
+const pid=()=>adb('shell','pidof',pkg).trim();function ticks(){const t=adb('shell','cat','/proc/'+pid()+'/stat').split(') ')[1].trim().split(/\s+/);return Number(t[11])+Number(t[12]);}
+async function cpuTicks(){const t=ticks();await delay(2000);return ticks()-t;}
+(async()=>{
+ adb('shell','input','keyevent','3');await delay(400);adb('shell','am','start','-n',pkg+'/.MainActivity');await delay(1000);
+ if(find(await nodes(),'盤に戻る'))await tap('盤に戻る');await top();await tap('open-preferences');const wasShown=find(await nodes(),'show-evaluation-switch').checked==='true';if(!wasShown)await tap('show-evaluation-switch');await tap('盤に戻る');
+ const samples=[];let originalPly;
+ for(let i=0;i<3;i++){const ns=await nodes();const ply=find(ns,'evaluation-move-number')?.text;originalPly??=ply;assert.equal(ply,originalPly);const depth=Number(find(ns,'evaluation-depth')?.text.match(/探索深さ (\d+)/)?.[1]);const sente=find(ns,'sente-percent')?.text,gote=find(ns,'gote-percent')?.text;assert(Number.isFinite(depth));assert.equal(parseInt(sente.match(/(\d+)%/)[1])+parseInt(gote.match(/(\d+)%/)[1]),100);samples.push({depth,sente,gote});await delay(1200);}
+ const activeTicks=await cpuTicks();assert(activeTicks>50,'Continuous analysis should be using the engine');
+ fs.writeFileSync('artifacts/screenshots/live-evaluation-android.png',execFileSync(adbPath,['-s',serial,'exec-out','screencap','-p'],{windowsHide:true}));
+ await tap('open-preferences');await tap('show-evaluation-switch');await tap('盤に戻る');assert(!find(await nodes(),'evaluation-panel'));await delay(1000);const hiddenTicks=await cpuTicks();assert(hiddenTicks<Math.max(50,activeTicks/2),'Hidden evaluation must stop searching');
+ await tap('open-preferences');await tap('show-evaluation-switch');await tap('盤に戻る');await delay(1000);adb('shell','input','keyevent','3');await delay(1000);const backgroundTicks=await cpuTicks();assert(backgroundTicks<Math.max(50,activeTicks/2),'Background must stop searching');
+ adb('shell','am','start','-n',pkg+'/.MainActivity');await delay(1000);await top();const final=await nodes();assert.equal(find(final,'evaluation-move-number')?.text,originalPly);assert(find(final,'evaluation-panel'));await tap('open-preferences');if(!wasShown)await tap('show-evaluation-switch');
+ const report={createdAt:new Date().toISOString(),passed:true,serial,testApkSha256:require('node:crypto').createHash('sha256').update(fs.readFileSync(process.argv[3])).digest('hex'),samples,activeTicks,hiddenTicks,backgroundTicks,existingGameRetained:true,originalPly};fs.writeFileSync('reports/presentation-live-android.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report));
+})().catch(e=>{console.error(e);process.exitCode=1;});

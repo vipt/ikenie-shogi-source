@@ -1,0 +1,7 @@
+{
+  "name": "meguru-engine",
+  "version": "1.2.23",
+  "description": "On-device Meguru shogi engine",
+  "license": "GPL-3.0-or-later",
+  "main": "index.ts"
+}
