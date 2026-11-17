@@ -6,7 +6,7 @@ import {HandicapSelector} from './src/ui/HandicapSelector';
 import {stageCpuMove,completeCpuMove,type AnimatedTimeline,type BoardPoint} from './src/game/cpu-animation';
 import {replaceGame,takeBackHistory,goForwardHistory} from './src/game/history';
 import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
-import { ActivityIndicator, AppState, Linking, Modal, Platform, Pressable, ScrollView, Share, StyleSheet, Switch, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Animated, AppState, Linking, Modal, Platform, Pressable, ScrollView, Share, StyleSheet, Switch, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import * as Haptics from 'expo-haptics';
@@ -27,6 +27,8 @@ import { colors, serif } from './src/ui/theme';
 import {advantagePercent,resultPercent,selfCaptureCounts} from './src/game/presentation';
 import {useMoveSound} from './src/ui/useMoveSound';
 import {EvaluationBar} from './src/ui/EvaluationBar';
+import {useResultEmphasis} from './src/ui/useResultEmphasis';
+import {resultDisplay} from './src/game/result-display';
 import appConfig from './app.json';
 import {formatSharedRecord} from './src/game/shared-record';
 
@@ -120,6 +122,7 @@ function AppContent() {
   const startingRef=useRef(false);
   const modalScroll=useRef<React.ComponentRef<typeof ScrollView>>(null);
   const animationSequence=useRef(0);
+  const [resultPlayback,setResultPlayback]=useState(false);
   const handRefs=useRef<Record<string,React.ComponentRef<typeof View>|null>>({});
   const finishCpuAnimation=useCallback((id:number)=>setTimeline(current=>completeCpuMove(current,id)),[]);
   const getDropOrigin=useCallback((side:Side,kind:HandKind)=>new Promise<BoardPoint|null>(resolve=>{const view=handRefs.current[side+'-'+kind];if(!view){resolve(null);return;}view.measureInWindow((x,y,w,h)=>resolve(w>0&&h>0?{x:x+w/2,y:y+h/2}:null));}),[]);
@@ -138,6 +141,8 @@ function AppContent() {
   const [evaluation,setEvaluation]=useState<{game:Game;cp:number|null;failed:boolean;depth:number;nodes:number}|null>(null);
   const [paused,setPaused]=useState(true);
   const [foreground,setForeground]=useState(AppState.currentState==='active');
+  const resultKey=game.result?`${session.id}:${game.log.length}:${game.result.winner}:${game.result.reason}`:null;
+  const {pulse:resultPulse,pulsing:resultPulsing}=useResultEmphasis(resultKey,ready,resultPlayback,foreground);
   const [cpuFailed,setCpuFailed]=useState(false);
   const gameId=useRef('game-'+Date.now());
   const position = game.position;
@@ -200,7 +205,7 @@ function AppContent() {
         if(active)setEvaluation({game,cp:update.cp,depth:update.depth,nodes:update.nodes,failed:false});
       }:undefined);
       void search.result.then(move=>{
-        if(active){const id=++animationSequence.current;setTimeline(current=>stageCpuMove(current,game,move,id));}
+        if(active){setResultPlayback(false);const id=++animationSequence.current;setTimeline(current=>stageCpuMove(current,game,move,id));}
       }).catch(error=>{if(active){console.warn('CPU search failed',error);setCpuFailed(true);setPaused(true);setNotice('CPUの着手に失敗しました。再試行できます。');}});
     },settings.mode==='watch'?350:250);
     return ()=>{active=false;clearTimeout(timer);search?.cancel();};
@@ -211,6 +216,7 @@ function AppContent() {
   }
   function commit(move: Move) {
     try {
+      setResultPlayback(false);
       setTimeline(replaceGame(play(game, move))); setSelection(null); setPromotion(null); setNotice(''); vibrate();
     } catch (error) { setNotice(error instanceof Error ? error.message : 'その手は指せません。'); }
   }
@@ -233,6 +239,7 @@ function AppContent() {
     startingRef.current=true;setStarting(true);
     try{if(hasStarted)await archiveGame(game,settings,session);}catch{setNotice('履歴を保存できなかったため、開始していません。もう一度お試しください。');startingRef.current=false;setStarting(false);return;}
     startingRef.current=false;setStarting(false);setSession(newSession());
+    setResultPlayback(false);
     const nextSettings=newGameSettings({...draft,rules:{...draft.rules,moveLimit:moveLimitValue}});
     gameId.current='game-'+Date.now();setPaused(false);setCpuFailed(false);
     setSettings(nextSettings); setTimeline(replaceGame(createGame(nextSettings.rules))); setDialog(null);
@@ -249,6 +256,7 @@ function AppContent() {
     if(startingRef.current)return;
     if(!redo.length)return;
     setPaused(true);setCpuFailed(false);gameId.current='redo-'+Date.now();
+    setResultPlayback(true);
     setTimeline(current=>goForwardHistory(current));setSelection(null);setPromotion(null);setNotice('');
   }
   async function shareRecord() {
@@ -258,13 +266,15 @@ function AppContent() {
 
   function HandTray({ side }: { side: Side }) {
     const active = hasStarted && side === position.turn && !game.result;
+    const winner=game.result?.winner===side;
+    const outcome=game.result?(game.result.winner?(winner?'勝ち':'負け'):'引き分け'):null;
     const total = Object.values(position.hands[side]).reduce((a, b) => a + b, 0);
-    return <View style={[styles.handTray, !wide && { paddingVertical: 6 }, active && styles.activeTray, { width: boardWidth }]}>
+    return <Animated.View testID={'hand-tray-'+side} style={[styles.handTray, !wide && { paddingVertical: 6 }, active && styles.activeTray, { width: boardWidth },winner&&{backgroundColor:resultPulse.interpolate({inputRange:[0,1],outputRange:['#E6EDDF','#D3E3B9']}),borderColor:colors.green}]}>
       <View style={styles.playerLine}>
         <View style={styles.row}>
           <View style={[styles.playerMark, side === 'gote' && styles.playerMarkGote]}><Text style={[styles.playerMarkText, side === 'gote' && { color: colors.green }]}>{side === 'sente' ? '先' : '後'}</Text></View>
           <Text testID={'player-'+side} style={styles.playerName}>{settings.mode === 'watch' ? SIDE_LABEL[side]+'CPU · Lv.'+cpuLevelFor(settings,side) : settings.mode === 'cpu' ? (side === humanSide(settings) ? 'あなた（'+SIDE_LABEL[side]+'）' : SIDE_LABEL[side]+'CPU · Lv.'+cpuLevelFor(settings,side)) : SIDE_LABEL[side]}</Text>
-          {active && <View style={styles.turnBadge}><Text style={styles.turnBadgeText}>手番</Text></View>}
+          {outcome?<View testID={winner&&resultPulsing?'result-emphasis':undefined} style={[styles.turnBadge,winner&&{backgroundColor:colors.green}]}><Text testID={'player-result-'+side} accessibilityLabel={SIDE_LABEL[side]+'：'+outcome} accessibilityLiveRegion="polite" style={[styles.turnBadgeText,winner&&{color:colors.paper,fontWeight:'700'}]}>{outcome}</Text></View>:active&&<View style={styles.turnBadge}><Text style={styles.turnBadgeText}>手番</Text></View>}
         </View>
       </View>
       <View testID={'hand-stats-'+side} style={styles.handStats}>
@@ -286,15 +296,15 @@ function AppContent() {
           </Pressable>;
         })}
       </View>
-    </View>;
+    </Animated.View>;
   }
 
   const statusTitle = !hasStarted ? '対局開始前' : game.result ? (game.result.winner ? `${SIDE_LABEL[game.result.winner]}の勝ち` : '引き分け')
-    : cpuAnimation ? SIDE_LABEL[position.turn]+'CPUが指しています' : settings.mode==='watch'&&paused ? 'CPU対局を一時停止中' : cpuThinking ? (settings.mode==='watch'?SIDE_LABEL[position.turn]+'CPUが考えています':'こまめが考えています') : cpuFailed?'CPUを停止しています':SIDE_LABEL[position.turn]+'の番です';
+    : cpuAnimation ? SIDE_LABEL[position.turn]+'CPUが指しています' : settings.mode==='watch'&&paused ? 'CPU対局を一時停止中' : cpuThinking ? SIDE_LABEL[position.turn]+'CPUが考えています' : cpuFailed?'CPUを停止しています':SIDE_LABEL[position.turn]+'の番です';
   const resultDetail=game.result?(game.result.reason==='move-limit'?`手数上限（${settings.rules.moveLimit}手）を超過`:reasons[game.result.reason])+' · '+game.log.length+'手まで':'';
-  const statusHint = !hasStarted ? '対局設定を選び、「対局をはじめる」を押してください。' : game.result ? resultDetail : settings.mode==='watch'&&paused?'「再開」でCPU同士の対局を続けます。':check ? (cpuTurn?'王手です。':'王手です。玉を守る手を選んでください。')
+  const statusHint = !hasStarted ? '対局設定を選び、「対局をはじめる」を押してください。' : game.result ? resultDisplay(game.result,settings,game.log.length).participant+' · '+resultDetail : settings.mode==='watch'&&paused?'「再開」でCPU同士の対局を続けます。':check ? (cpuTurn?'王手です。':'王手です。玉を守る手を選んでください。')
     : selection ? targets.length ? '緑のマスへ移動。橙のマスは味方を回収。' : 'この駒は、いま動かせません。'
-      : cpuTurn ? 'どの駒をめぐらせよう？' : '駒を選んで、移動先をタップ。';
+      : cpuTurn ? '次の指し手を探索しています。' : '駒を選んで、移動先をタップ。';
   const topSide: Side = settings.flipped ? 'sente' : 'gote';
 
   if (!ready) return <SafeAreaView style={styles.loading}><ActivityIndicator color={colors.green} /><Text style={styles.caption}>盤を用意しています…</Text></SafeAreaView>;
@@ -303,25 +313,17 @@ function AppContent() {
     {ready && hasStarted && foreground && !game.result && !dialog && !cpuFailed && (settings.mode !== 'watch' || !paused) && <GameScreenAwake />}
     <StatusBar style="dark" />
     {dialog==='archives'?<ArchiveScreen snapshot={{game:cpuAnimation?.after??game,settings,session}} onClose={()=>setDialog(null)}/>:<ScrollView testID="game-scroll" contentContainerStyle={styles.page}>
-      <View style={[styles.header, !wide && { paddingTop: 12, paddingBottom: 14, marginBottom: 16 }]}>
-        <View style={styles.row}>
-          <View style={styles.logo}><Text style={styles.logoText}>生</Text><Text style={styles.logoArrow}>↻</Text></View>
-          <View><Text style={styles.brand}>生贄将棋</Text><Text style={styles.brandSub}>味方の駒に、もう一度出番を。</Text></View>
-        </View>
-        <View style={styles.row}><Pressable testID="open-preferences" accessibilityRole="button" accessibilityLabel="アプリの設定" onPress={()=>setDialog('preferences')} style={styles.helpButton}><Text style={styles.preferenceButton}>設定</Text></Pressable><Pressable accessibilityRole="button" accessibilityLabel="遊び方を開く" onPress={() => setDialog('rules')} style={styles.helpButton}><Text style={styles.helpText}>？</Text></Pressable></View>
-      </View>
-
       <View style={[styles.layout, !wide && { flexDirection: 'column', alignItems: 'center', gap: 24 }]}>
         <View style={[styles.playArea, { width: boardWidth + 20 }]}>
           <View style={[styles.matchHeader, { width: boardWidth }]}>
             <Pressable testID="open-game-settings" accessibilityRole="button" accessibilityLabel="対局設定を開く" onPress={() => openNew()} style={styles.modeBadge}>
               <Text style={styles.modeText}>対局設定 <Text style={{ color: colors.muted }}>⌄</Text></Text>
             </Pressable>
-            {!settings.showEvaluation&&<Text testID="header-move-number" style={styles.moveNumber}>{String(game.log.length).padStart(2, '0')} <Text style={styles.caption}>手目</Text></Text>}
+            <View style={styles.row}><Pressable testID="open-preferences" accessibilityRole="button" accessibilityLabel="アプリの設定" onPress={()=>setDialog('preferences')} style={styles.helpButton}><Text style={styles.preferenceButton}>設定</Text></Pressable><Pressable testID="open-rules" accessibilityRole="button" accessibilityLabel="遊び方とルールを開く" onPress={() => setDialog('rules')} style={styles.helpButton}><Text style={styles.helpText}>？</Text></Pressable></View>
           </View>
           <View style={{width:boardWidth,marginBottom:12,flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:8}}>
             <View testID={game.result?'game-result':'match-summary'} accessibilityLiveRegion="polite" accessibilityLabel={game.result?statusTitle+'。'+resultDetail:undefined} style={{height:40*fontScale,flex:1,justifyContent:'center'}}>
-              {game.result?<><Text numberOfLines={1} style={styles.resultText}>{statusTitle}</Text><Text numberOfLines={1} style={styles.tiny}>{resultDetail}</Text></>:<Text testID="current-move-limit" numberOfLines={1} style={styles.tiny}>{settings.rules.moveLimit??DEFAULT_MOVE_LIMIT}手を超えたら引き分け</Text>}
+              {game.result?<><Text numberOfLines={1} style={styles.resultText}>{statusTitle}</Text><Text numberOfLines={1} style={styles.tiny}>{resultDetail}</Text></>:<>{!settings.showEvaluation&&<Text testID="header-move-number" style={styles.moveNumber}>{String(game.log.length).padStart(2, '0')} <Text style={styles.caption}>手目</Text></Text>}<Text testID="current-move-limit" numberOfLines={1} style={styles.tiny}>{settings.rules.moveLimit??DEFAULT_MOVE_LIMIT}手を超えたら引き分け</Text></>}
             </View>
             <Pressable testID="open-archives" accessibilityRole="button" onPress={()=>{setPaused(true);setNotice('');setDialog('archives');}} style={{paddingVertical:10,paddingHorizontal:8}}><Text style={styles.textLink}>対局履歴</Text></Pressable>
           </View>
@@ -342,11 +344,11 @@ function AppContent() {
               <Text testID="evaluation-depth" numberOfLines={1} style={styles.caption}>探索深さ {evaluation?.game===game&&!game.result&&!evaluationFailed&&evaluation.depth>0?evaluation.depth:'—'}</Text>
             </View>
           </View>}
-          <HandTray side={topSide} />
+          {HandTray({side:topSide})}
           <View style={[styles.boardSpace, !wide && { marginTop: 8, marginBottom: 14 },{zIndex:cpuAnimation?2:0}]}><Board position={position} width={boardWidth} flipped={settings.flipped}
             selected={selection && 'square' in selection ? selection.square : null} moves={targets}
             lastMove={lastMove} checked={check} cpuAnimation={cpuAnimation} onAnimationComplete={finishCpuAnimation} getDropOrigin={getDropOrigin} onSquare={tapSquare} disabled={!hasStarted || !!cpuTurn || !!game.result} /></View>
-          <HandTray side={opposite(topSide)} />
+          {HandTray({side:opposite(topSide)})}
           <View testID="game-status" accessibilityLiveRegion="polite" style={[styles.status, !wide && { paddingVertical: 12 }, { width: boardWidth }]}>
             <View style={styles.row}>{cpuThinking ? <ActivityIndicator size="small" color={colors.green} /> : <View style={[styles.statusDot, check && { backgroundColor: colors.red }]} />}
               <Text numberOfLines={1} style={[styles.statusTitle,game.result&&{color:colors.green},check&&!game.result&&{color:colors.red}]}>{statusTitle}</Text>
@@ -373,29 +375,14 @@ function AppContent() {
         </View>
 
         <View style={[styles.sidebar, !wide && { width: boardWidth }]}>
-          <View style={styles.featureCard}>
-            <Text style={styles.eyebrow}>いつもの将棋に、ひとつの自由。</Text>
-            <Text style={styles.featureTitle}>味方を取る。{wide ? '\n' : ''}次の一手が、広がる。</Text>
-            <View style={styles.diagram}>
-              <View style={styles.demoSquare}><PieceView piece={{ kind: 'R', side: 'sente', promoted: false }} size={43} /></View>
-              <Text style={styles.diagramArrow}>→</Text>
-              <View style={[styles.demoSquare, { backgroundColor: '#EBC18D' }]}><PieceView piece={{ kind: 'P', side: 'sente', promoted: false }} size={43} /></View>
-              <Text style={styles.diagramArrow}>→</Text>
-              <View style={styles.demoHand}><Text style={styles.demoHandPiece}>歩</Text><Text style={styles.tiny}>持ち駒へ</Text></View>
-            </View>
-            <Text style={styles.bodyText}>飛車で味方の歩を回収。{wide ? '\n' : ''}その歩を、次の攻めや守りに。</Text>
-            <View style={styles.ruleNote}><Text style={styles.ruleNoteText}>{RECOVERY_LABELS[settings.rules.selfCapture??'both']+'。'+ruleDescriptions[settings.rules.kingCapture]}</Text></View>
-            <Pressable accessibilityRole="button" onPress={() => setDialog('rules')}><Text style={styles.textLink}>遊び方とルールを見る →</Text></Pressable>
-          </View>
           <View style={styles.legend}><View style={styles.row}><View style={[styles.legendDot, { backgroundColor: '#8AA57A' }]} /><Text style={styles.caption}>移動できる</Text></View><View style={styles.row}><View style={[styles.legendDot, { backgroundColor: '#DDA366' }]} /><Text style={styles.caption}>味方を回収</Text></View></View>
           <View style={styles.recordCard}>
-            <View style={styles.recordHeading}><Text style={styles.cardTitle}>この対局のあゆみ</Text><Text style={styles.recoverCounter}>↻ 回収 {selfCaptures}回</Text></View>
+            <View style={styles.recordHeading}><Text style={styles.cardTitle}>棋譜</Text><Text style={styles.recoverCounter}>↻ 回収 {selfCaptures}回</Text></View>
             {game.log.length ? game.log.slice(-5).map((r, i) => <View style={styles.recordRow} key={game.log.length - Math.min(5, game.log.length) + i}>
               <Text style={styles.recordIndex}>{game.log.length - Math.min(5, game.log.length) + i + 1}</Text><Text style={[styles.recordText, r.selfCapture && { color: colors.orange }]}>{r.label}</Text>
-            </View>) : <View style={styles.emptyRecord}><Text style={styles.emptyRecordMark}>一</Text><Text style={styles.caption}>最初の一手を、自由に。</Text></View>}
+            </View>) : <View style={styles.emptyRecord}><Text style={styles.caption}>まだ指し手はありません。</Text></View>}
             <Pressable accessibilityRole="button" onPress={() => setDialog('history')} style={styles.recordFooter}><Text style={styles.textLink}>すべての棋譜を見る →</Text></Pressable>
           </View>
-          <Text style={styles.sidebarFooter}>MEGURU SHOGI · めぐる、つながる。</Text>
         </View>
       </View>
     </ScrollView>}
@@ -403,7 +390,7 @@ function AppContent() {
     <Modal visible={(!!dialog&&dialog!=='archives') || !!promotion} transparent animationType="fade" onRequestClose={() => { if(startingRef.current)return;setDialog(null); setPromotion(null); }}>
       <View style={styles.modalBackdrop}><View style={[styles.modal, { maxHeight: '90%' }]}>
         <ScrollView ref={modalScroll} contentContainerStyle={styles.modalInner}>
-          <View style={styles.modalHeading}><Text style={styles.modalTitle}>{promotion ? '成りますか？' : dialog === 'rules' ? '生贄将棋の遊び方' : dialog === 'preferences' ? '設定' : dialog === 'new' ? '新しい対局' : dialog === 'resign' ? '投了しますか？' : dialog === 'history' ? '対局の棋譜' : dialog==='licenses'?'使用ソフトウェア':statusTitle}</Text>
+          <View style={styles.modalHeading}><Text style={styles.modalTitle}>{promotion ? '成りますか？' : dialog === 'rules' ? '遊び方とルール' : dialog === 'preferences' ? '設定' : dialog === 'new' ? '新しい対局' : dialog === 'resign' ? '投了しますか？' : dialog === 'history' ? '対局の棋譜' : dialog==='licenses'?'使用ソフトウェア':statusTitle}</Text>
             <Pressable testID="close-dialog" accessibilityRole="button" accessibilityLabel="閉じる" disabled={starting} onPress={() => { setDialog(null); setPromotion(null); }} style={styles.closeButton}><Text style={styles.closeText}>×</Text></Pressable>
           </View>
 
@@ -417,6 +404,7 @@ function AppContent() {
           </> : dialog === 'preferences' ? <>
             <DisplaySettings onPreview={previewMoveSound} value={settings} onChange={patch=>{setSettings(s=>({...s,...patch}));setDraft(d=>({...d,...patch}));}} />
             <PrivacyPolicyLink />
+            <Button secondary testID="preferences-open-rules" onPress={()=>setDialog('rules')}>遊び方とルール</Button>
             <Button secondary testID="open-licenses" onPress={()=>setDialog('licenses')}>使用ソフトウェア・ライセンス</Button>
             <Button onPress={()=>setDialog(null)}>盤に戻る</Button>
           </> : dialog === 'new' ? <>
@@ -461,7 +449,19 @@ function AppContent() {
             {game.log.length > 0 && <Text style={styles.caption}>現在の棋譜は対局履歴に残して、新しい対局を開始します。</Text>}
             <Button testID="start-game" disabled={!moveLimitValid||starting} onPress={()=>{void startGame();}}>{starting?'履歴を保存中…':'対局をはじめる'}</Button>
           </> : dialog === 'rules' ? <>
-            <Text style={styles.ruleLead}>味方も、次の一手の力になる。</Text>
+            <View testID="rules-introduction" style={styles.featureCard}>
+            <Text style={styles.eyebrow}>いつもの将棋に、ひとつの自由。</Text>
+            <Text style={styles.featureTitle}>味方を取る。次の一手が、広がる。</Text>
+            <View style={styles.diagram}>
+              <View style={styles.demoSquare}><PieceView piece={{ kind: 'R', side: 'sente', promoted: false }} size={36} /></View>
+              <Text style={styles.diagramArrow}>→</Text>
+              <View style={[styles.demoSquare, { backgroundColor: '#EBC18D' }]}><PieceView piece={{ kind: 'P', side: 'sente', promoted: false }} size={36} /></View>
+              <Text style={styles.diagramArrow}>→</Text>
+              <View style={styles.demoHand}><Text style={styles.demoHandPiece}>歩</Text><Text style={styles.tiny}>持ち駒へ</Text></View>
+            </View>
+            <Text style={styles.bodyText}>飛車で味方の歩を回収。その歩を、次の攻めや守りに。</Text>
+            <View style={styles.ruleNote}><Text style={styles.ruleNoteText}>{RECOVERY_LABELS[settings.rules.selfCapture??'both']+'。'+ruleDescriptions[settings.rules.kingCapture]}</Text></View>
+          </View>
             {[
               ['01', '味方の駒を回収できる', '駒の通常の動きで味方のいるマスに進むと、その駒が自分の持ち駒になります。回収と打ち直しは、それぞれ1手です。'],
               ['02', '玉には、特別な制限', ruleDescriptions[settings.rules.kingCapture] + ' どの設定でも玉そのものは取れず、玉同士は隣り合えません。'],
@@ -480,7 +480,7 @@ function AppContent() {
             <Text selectable style={styles.caption}>{licenseText}</Text>
           </> : dialog === 'resign' ? <>
             <Text style={styles.bodyText}>{SIDE_LABEL[settings.mode === 'cpu' ? humanSide(settings) : position.turn]}の投了として対局を終了します。</Text>
-            <View style={styles.modalActions}><Button secondary onPress={() => setDialog(null)}>続ける</Button><Button onPress={() => { setTimeline(replaceGame(resign(game, settings.mode === 'cpu' ? humanSide(settings) : position.turn))); setDialog(null); }}>投了する</Button></View>
+            <View style={styles.modalActions}><Button secondary onPress={() => setDialog(null)}>続ける</Button><Button onPress={() => { setResultPlayback(false);setTimeline(replaceGame(resign(game, settings.mode === 'cpu' ? humanSide(settings) : position.turn))); setDialog(null); }}>投了する</Button></View>
           </> : dialog === 'history' ? <>
             <Text style={styles.caption}>{RECOVERY_LABELS[settings.rules.selfCapture??'both']+'。'+ruleDescriptions[settings.rules.kingCapture]}</Text>
             {!game.log.length && <Text style={styles.bodyText}>まだ指し手はありません。</Text>}
@@ -499,14 +499,8 @@ export default function App() { return <SafeAreaProvider><AppContent /></SafeAre
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16, backgroundColor: colors.background },
-  page: { width: '100%', maxWidth: 1060, alignSelf: 'center', paddingHorizontal: 16, paddingBottom: 40 },
-  header: { paddingTop: 25, paddingBottom: 26, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: colors.line, marginBottom: 28 },
+  page: { width: '100%', maxWidth: 1060, alignSelf: 'center', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 24 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  logo: { width: 47, height: 49, backgroundColor: colors.green, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginRight: 5 },
-  logoText: { color: '#F7F4E5', fontFamily: serif, fontSize: 28, marginTop: -4 },
-  logoArrow: { position: 'absolute', bottom: -1, right: 4, color: '#D4DFAF', fontSize: 19 },
-  brand: { color: colors.ink, fontFamily: serif, fontSize: 26, fontWeight: '700', letterSpacing: 2 },
-  brandSub: { color: colors.muted, fontSize: 10, marginTop: 5, letterSpacing: 0.8 },
   helpButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 22, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.paper },
   helpText: { color: colors.green, fontSize: 19 },
   preferenceButton:{color:colors.green,fontSize:12,fontWeight:'600'},
@@ -520,10 +514,10 @@ const styles = StyleSheet.create({
   resultText:{color:colors.green,fontSize:15,lineHeight:20,fontWeight:'700'},
   layout: { flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-start', gap: 48 },
   playArea: { alignItems: 'flex-start' },
-  matchHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
-  modeBadge: { backgroundColor: colors.greenLight, paddingVertical: 10, paddingHorizontal: 15, borderRadius: 25 },
+  matchHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 },
+  modeBadge: { minHeight: 44, justifyContent: 'center', backgroundColor: colors.greenLight, paddingVertical: 10, paddingHorizontal: 15, borderRadius: 25 },
   modeText: { color: colors.green, fontWeight: '600', fontSize: 12 },
-  moveNumber: { fontSize: 25, color: colors.ink, fontVariant: ['tabular-nums'], fontWeight: '500' },
+  moveNumber: { fontSize: 18, lineHeight: 22, color: colors.ink, fontVariant: ['tabular-nums'], fontWeight: '500' },
   caption: { fontSize: 11, lineHeight: 18, color: colors.muted },
   handTray: { paddingHorizontal: 12, paddingVertical: 10, backgroundColor: '#EEEFE7', borderRadius: 12, borderWidth: 1, borderColor: 'transparent' },
   playerSettings:{borderWidth:1,borderColor:colors.line,borderRadius:12,padding:12,gap:8,marginBottom:12},
@@ -555,11 +549,11 @@ const styles = StyleSheet.create({
   tiny: { color: colors.muted, fontSize: 9, lineHeight: 16 },
   textLink: { color: colors.green, fontSize: 11, lineHeight: 20, fontWeight: '600' },
   sidebar: { width: 312, paddingTop: 2, gap: 18 },
-  featureCard: { backgroundColor: '#EAF0E2', borderRadius: 18, padding: 24, gap: 17 },
+  featureCard: { backgroundColor: '#EAF0E2', borderRadius: 18, padding: 16, gap: 14 },
   eyebrow: { color: colors.green, fontSize: 10, letterSpacing: 0.7 },
-  featureTitle: { color: colors.ink, fontFamily: serif, fontSize: 24, lineHeight: 38, fontWeight: '600', letterSpacing: 0.2 },
-  diagram: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingVertical: 6 },
-  demoSquare: { width: 54, height: 58, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.board, borderWidth: 1, borderColor: '#C5A568', borderRadius: 6 },
+  featureTitle: { color: colors.ink, fontFamily: serif, fontSize: 20, lineHeight: 30, fontWeight: '600', letterSpacing: 0.2 },
+  diagram: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 4, paddingVertical: 6 },
+  demoSquare: { width: 44, height: 48, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.board, borderWidth: 1, borderColor: '#C5A568', borderRadius: 6 },
   diagramArrow: { color: colors.green, fontSize: 18 },
   demoHand: { alignItems: 'center', gap: 2 },
   demoHandPiece: { color: colors.green, fontFamily: serif, fontSize: 28, fontWeight: '600' },
@@ -577,8 +571,6 @@ const styles = StyleSheet.create({
   recordText: { flex: 1, color: colors.ink, fontSize: 12 },
   recordFooter: { marginTop: 14 },
   emptyRecord: { alignItems: 'center', paddingVertical: 22, gap: 9 },
-  emptyRecordMark: { color: '#C5CDBA', fontFamily: serif, fontSize: 28 },
-  sidebarFooter: { color: '#9AA08F', fontSize: 9, letterSpacing: 1, textAlign: 'center', marginTop: 5 },
   notice: { color: colors.orange, fontSize: 12, lineHeight: 20, marginBottom: 12, paddingHorizontal: 8 },
   modalBackdrop: { flex: 1, backgroundColor: '#132A24A6', justifyContent: 'center', alignItems: 'center', padding: 20 },
   modal: { width: '100%', maxWidth: 460, backgroundColor: colors.paper, borderRadius: 22, overflow: 'hidden' },
@@ -593,7 +585,6 @@ const styles = StyleSheet.create({
   selectedOption: { borderColor: colors.green, backgroundColor: colors.greenLight },
   optionTitle: { color: colors.ink, fontSize: 13, fontWeight: '600', lineHeight: 21 },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  ruleLead: { color: colors.green, fontFamily: serif, fontSize: 18 },
   ruleItem: { flexDirection: 'row', gap: 13, marginTop: 3 },
   ruleNumber: { color: '#9BAC88', fontSize: 13, paddingTop: 3 },
   resultSymbol: { color: colors.green, fontSize: 64, fontFamily: serif, textAlign: 'center', paddingVertical: 15 },

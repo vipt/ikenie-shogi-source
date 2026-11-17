@@ -2,9 +2,9 @@
 
 ## このリポジトリについて
 
-現在のアプリは **生贄将棋 v1.2.28** です。アプリ本体、改造したやねうら王のソース、学習済み評価関数、定跡、画像・音声、テスト、開発用スクリプトを含みます。Androidの公開用パッケージIDは `net.vipt.ikenie_shogi` です。
+現在のアプリは **生贄将棋 v1.2.29** です。アプリ本体、改造したやねうら王のソース、学習済み評価関数、定跡、画像・音声、テスト、開発用スクリプトを含みます。Androidの公開用パッケージIDは `net.vipt.ikenie_shogi` です。
 
-公開版に対応するソースは [v1.2.28のリリース](https://github.com/vipt/ikenie-shogi-source/releases/tag/v1.2.28) から入手できます。`ikenie-shogi-1.2.28-source.zip` は、そのAABのビルドで使用した生成済みAndroid設定を含みます。[ビルド手順・配布物の対応関係](docs/SOURCE_DISTRIBUTION.md)と[変更記録](CHANGELOG.md)を参照してください。本アプリはGPL v3以降で配布します。依存ライブラリ・素材の個別の著作権表示は保持しています。
+公開版に対応するソースは [v1.2.29のリリース](https://github.com/vipt/ikenie-shogi-source/releases/tag/v1.2.29) から入手できます。`ikenie-shogi-1.2.29-source.zip` は、そのAABのビルドで使用した生成済みAndroid設定を含みます。[ビルド手順・配布物の対応関係](docs/SOURCE_DISTRIBUTION.md)と[変更記録](CHANGELOG.md)を参照してください。本アプリはGPL v3以降で配布します。依存ライブラリ・素材の個別の著作権表示は保持しています。
 
 署名鍵・認証情報、端末内の対局データ、生成済みAPK、実験棋譜や検証結果のJSON、ローカル開発ツールはGit管理の対象外です。以下の過去の開発記録には、ローカル生成ファイルへのリンクも含まれます。
 
